@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Klinique Group — Branch Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Segoe UI','Sarabun',sans-serif; background:#f1f5f9; color:#1e293b; }
@@ -30,13 +29,9 @@
   .stat .num { font-size:26px; font-weight:700; }
   .stat .lbl { font-size:12px; color:#64748b; }
 
-  .charts { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
-  @media(max-width:880px){ .charts{ grid-template-columns:1fr;} }
+  .controls { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:16px; }
   .card { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .card h3 { font-size:15px; color:#334155; margin-bottom:12px; }
-  .chart-box { position:relative; height:240px; }
-
-  .controls { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:16px; }
   .search { position:relative; margin-bottom:12px; }
   .search input { width:100%; padding:10px 36px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; }
   .search input:focus { border-color:#d4af37; box-shadow:0 0 0 3px rgba(212,175,55,.2); }
@@ -78,10 +73,6 @@
 
   <div class="wrap">
     <div class="stats" id="stats"></div>
-    <div class="charts">
-      <div class="card"><h3>สัดส่วนสาขาแต่ละแบรนด์</h3><div class="chart-box"><canvas id="pie"></canvas></div></div>
-      <div class="card"><h3>จำนวนสาขาต่อแบรนด์</h3><div class="chart-box"><canvas id="bar"></canvas></div></div>
-    </div>
     <div class="controls">
       <div class="search">
         <span class="si">🔍</span>
@@ -91,11 +82,22 @@
       <div class="chips" id="chips"></div>
     </div>
     <div class="grid" id="grid"></div>
+    <div class="card" id="debugCard" style="margin-top:16px;font-size:12px;color:#64748b">
+      <h3 style="color:#334155">🔧 สถานะการเชื่อมต่อ (debug)</h3>
+      <div id="debugLog" style="font-family:monospace;white-space:pre-wrap;line-height:1.6"></div>
+    </div>
   </div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfzUQ-i4-flEwpGeGMzRMnpwzbIZUIM9_f2bOQ6tCSPRlBUGmfh_-No23gaTmoauwkJY30pDvCaTum/pub?output=csv";
+// gviz endpoint (JSONP, CORS-friendly). Uses the original spreadsheet id + gid.
+const SHEET_ID = "1k7hAoYI2i8_0yVgJjojuE31r70M2VgRfmB-lCYnsNwQ";
+const GID = "2030192058";
 const REFRESH_MS = 60000;
+const PROXIES = [
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+];
 
 const BRAND_META = {
   TKC:     { label:"The Klinique", color:"#d4af37" },
@@ -142,17 +144,62 @@ function rowsToBranches(rows){
   return out;
 }
 
-let branches=[], activeBrand="ALL", query="", pieChart=null, barChart=null, status="loading", lastSync=null;
+let branches=[], activeBrand="ALL", query="", status="loading", lastSync=null;
+let debugLines=[];
+function dbg(msg){ debugLines.push(`[${new Date().toLocaleTimeString("th-TH")}] ${msg}`); const el=document.getElementById("debugLog"); if(el) el.textContent=debugLines.slice(-12).join("\n"); }
+
+// --- Loader 1: gviz JSONP (no CORS issues) ---
+function loadGviz(){
+  return new Promise((resolve,reject)=>{
+    const cbName="__gviz_cb_"+Date.now();
+    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=responseHandler:${cbName}&t=${Date.now()}`;
+    const s=document.createElement("script");
+    const timer=setTimeout(()=>{ cleanup(); reject(new Error("gviz timeout")); },10000);
+    function cleanup(){ clearTimeout(timer); delete window[cbName]; if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cbName]=(resp)=>{
+      try{
+        const rows=(resp.table.rows||[]).map(r=>(r.c||[]).map(c=>c?(c.v!=null?String(c.v):""):""));
+        cleanup(); resolve(rows);
+      }catch(e){ cleanup(); reject(e); }
+    };
+    s.onerror=()=>{ cleanup(); reject(new Error("gviz script error")); };
+    s.src=url; document.head.appendChild(s);
+  });
+}
+
+// --- Loader 2: direct CSV fetch ---
+async function loadCsvDirect(){
+  const res=await fetch(CSV_URL+"&t="+Date.now());
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  return parseCSV(await res.text());
+}
+
+// --- Loader 3: CSV via CORS proxy ---
+async function loadCsvProxy(){
+  for(const p of PROXIES){
+    try{
+      const res=await fetch(p(CSV_URL+"&t="+Date.now()));
+      if(!res.ok) continue;
+      const rows=parseCSV(await res.text());
+      if(rows.length) return rows;
+    }catch(e){ /* try next */ }
+  }
+  throw new Error("all proxies failed");
+}
 
 async function load(){
-  try{
-    const res=await fetch(CSV_URL+"&t="+Date.now());
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const text=await res.text();
-    const parsed=rowsToBranches(parseCSV(text));
-    if(parsed.length===0) throw new Error("no rows");
-    branches=parsed; status="live"; lastSync=new Date();
-  }catch(e){ if(status!=="live") status="offline"; }
+  const loaders=[["gviz JSONP",loadGviz],["CSV ตรง",loadCsvDirect],["CSV proxy",loadCsvProxy]];
+  for(const [name,fn] of loaders){
+    try{
+      dbg(`กำลังลอง: ${name} ...`);
+      const rows=await fn();
+      const parsed=rowsToBranches(rows);
+      if(parsed.length){ branches=parsed; status="live"; lastSync=new Date(); dbg(`✅ สำเร็จด้วย ${name} — ได้ ${parsed.length} สาขา`); render(); return; }
+      dbg(`⚠️ ${name}: ดึงได้แต่ parse ไม่เจอข้อมูล`);
+    }catch(e){ dbg(`❌ ${name}: ${e.message||e}`); }
+  }
+  if(status!=="live") status="offline";
+  dbg("⛔ ทุกวิธีล้มเหลว — ใช้สถานะ Offline");
   render();
 }
 
@@ -205,20 +252,6 @@ function render(){
         ${phones.length?`<div class="line"><span class="li">📞</span><div>${phones.map(p=>`<a href="tel:${p.replace(/[^0-9+]/g,'')}" style="margin-right:8px">${esc(p)}</a>`).join("")}</div></div>`:""}
       </div>`;
     }).join("");
-
-  drawCharts(pb,cb);
-}
-
-function drawCharts(pb,cb){
-  const labels=pb.map(k=>BRAND_META[k].label), data=pb.map(k=>cb[k]||0), colors=pb.map(k=>BRAND_META[k].color);
-  if(pieChart) pieChart.destroy();
-  if(barChart) barChart.destroy();
-  pieChart=new Chart(document.getElementById("pie"),{type:"doughnut",
-    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:"#fff"}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11}}}}}});
-  barChart=new Chart(document.getElementById("bar"),{type:"bar",
-    data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:11}}},x:{ticks:{font:{size:10}}}}}});
 }
 
 function esc(s){ return (s||"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
