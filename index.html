@@ -89,10 +89,16 @@
   </div>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfzUQ-i4-flEwpGeGMzRMnpwzbIZUIM9_f2bOQ6tCSPRlBUGmfh_-No23gaTmoauwkJY30pDvCaTum/pub?output=csv";
-// gviz endpoint (JSONP, CORS-friendly). Uses the original spreadsheet id + gid.
 const SHEET_ID = "1k7hAoYI2i8_0yVgJjojuE31r70M2VgRfmB-lCYnsNwQ";
-const GID = "2030192058";
+// แต่ละแบรนด์อยู่คนละแท็บ (gid) — ดึงทีละแท็บแล้วรวมกัน
+const TABS = [
+  { gid: "2030192058", brand: "TKC" },
+  { gid: "1968270494", brand: "LABX" },
+  { gid: "1913778139", brand: "LCLINIC" },
+  { gid: "287917091",  brand: "SPA" },
+  { gid: "516769174",  brand: "HAIR" },
+  { gid: "1998580097", brand: "ACNE" },
+];
 const REFRESH_MS = 60000;
 const PROXIES = [
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
@@ -150,86 +156,53 @@ function rowsToBranches(rows){
 
 let branches=[], activeBrand="ALL", query="", status="loading", lastSync=null;
 let debugLines=[];
-function dbg(msg){ debugLines.push(`[${new Date().toLocaleTimeString("th-TH")}] ${msg}`); const el=document.getElementById("debugLog"); if(el) el.textContent=debugLines.slice(-12).join("\n"); }
+function dbg(msg){ debugLines.push(`[${new Date().toLocaleTimeString("th-TH")}] ${msg}`); const el=document.getElementById("debugLog"); if(el) el.textContent=debugLines.slice(-16).join("\n"); }
 
-// --- Loader 1: gviz CSV via JSONP-style script is not possible for CSV, so use fetch with gviz CSV (returns ALL rows, not truncated at blank rows) ---
-function loadGvizCsv(){
-  return new Promise(async (resolve,reject)=>{
-    try{
-      const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=out:csv&t=${Date.now()}`;
-      const res=await fetch(url);
-      if(!res.ok) throw new Error("HTTP "+res.status);
-      const rows=parseCSV(await res.text());
-      if(!rows.length) throw new Error("empty");
-      resolve(rows);
-    }catch(e){ reject(e); }
-  });
+// สร้าง URL gviz CSV ของแท็บหนึ่ง
+function gvizCsvUrl(gid){
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:csv&t=${Date.now()}`;
 }
 
-// --- Loader 1b: gviz JSON via JSONP (fallback, but note: may truncate at blank rows) ---
-function loadGvizJson(){
-  return new Promise((resolve,reject)=>{
-    const cbName="__gviz_cb_"+Date.now();
-    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&headers=0&tqx=responseHandler:${cbName}&t=${Date.now()}`;
-    const s=document.createElement("script");
-    const timer=setTimeout(()=>{ cleanup(); reject(new Error("gviz timeout")); },10000);
-    function cleanup(){ clearTimeout(timer); delete window[cbName]; if(s.parentNode) s.parentNode.removeChild(s); }
-    window[cbName]=(resp)=>{
-      try{
-        const rows=(resp.table.rows||[]).map(r=>(r.c||[]).map(c=>c?(c.v!=null?String(c.v):""):""));
-        cleanup(); resolve(rows);
-      }catch(e){ cleanup(); reject(e); }
-    };
-    s.onerror=()=>{ cleanup(); reject(new Error("gviz script error")); };
-    s.src=url; document.head.appendChild(s);
-  });
-}
-
-// --- Loader 2: direct CSV fetch ---
-async function loadCsvDirect(){
-  const res=await fetch(CSV_URL+"&t="+Date.now());
-  if(!res.ok) throw new Error("HTTP "+res.status);
-  return parseCSV(await res.text());
-}
-
-// --- Loader 3: CSV via CORS proxy ---
-async function loadCsvProxy(){
+// ดึง CSV ของแท็บเดียว — ลอง fetch ตรงก่อน ถ้าไม่ได้ลองผ่าน proxy
+async function fetchTabCsv(gid){
+  const url=gvizCsvUrl(gid);
+  // 1) ตรง
+  try{
+    const res=await fetch(url);
+    if(res.ok){ const t=await res.text(); if(t && t.length>5) return parseCSV(t); }
+  }catch(e){ /* ลอง proxy ต่อ */ }
+  // 2) ผ่าน proxy
   for(const p of PROXIES){
     try{
-      const res=await fetch(p(CSV_URL+"&t="+Date.now()));
-      if(!res.ok) continue;
-      const rows=parseCSV(await res.text());
-      if(rows.length) return rows;
-    }catch(e){ /* try next */ }
+      const res=await fetch(p(url));
+      if(res.ok){ const t=await res.text(); if(t && t.length>5) return parseCSV(t); }
+    }catch(e){ /* ลองตัวถัดไป */ }
   }
-  throw new Error("all proxies failed");
+  throw new Error("ดึงแท็บ gid="+gid+" ไม่ได้");
 }
 
 async function load(){
-  // CSV publish-to-web ส่งครบทุกแถวทั้งแผ่น (ไม่ตัดที่แถวว่าง) → ใช้เป็นหลัก
-  // gviz ตัดข้อมูลที่แถวว่างแรก ได้แค่บล็อกแรก → ใช้เป็นตัวสำรองสุดท้ายเท่านั้น
-  const loaders=[
-    ["CSV publish (ตรง)", loadCsvDirect],
-    ["CSV publish (proxy)", loadCsvProxy],
-    ["gviz CSV (อาจไม่ครบ)", loadGvizCsv],
-    ["gviz JSON (อาจไม่ครบ)", loadGvizJson],
-  ];
-  let best=null, bestName="";
-  for(const [name,fn] of loaders){
+  dbg("เริ่มดึงข้อมูลทั้ง "+TABS.length+" แท็บ...");
+  const all=[];
+  let okCount=0;
+  for(const tab of TABS){
     try{
-      dbg(`กำลังลอง: ${name} ...`);
-      const rows=await fn();
-      const parsed=rowsToBranches(rows);
-      dbg(`   → ${name}: ได้ ${parsed.length} สาขา`);
-      if(parsed.length>(best?best.length:0)){ best=parsed; bestName=name; }
-      // ถ้าได้มากกว่า 52 (เกินบล็อกแรก) ถือว่าครบแล้ว หยุดเลย
-      if(parsed.length>60){ branches=parsed; status="live"; lastSync=new Date(); dbg(`✅ สำเร็จด้วย ${name} — ครบ ${parsed.length} สาขา`); render(); return; }
-    }catch(e){ dbg(`❌ ${name}: ${e.message||e}`); }
+      const rows=await fetchTabCsv(tab.gid);
+      const parsed=rowsToBranches(rows, tab.brand);
+      all.push(...parsed);
+      okCount++;
+      dbg(`✅ ${BRAND_META[tab.brand].label}: ${parsed.length} สาขา`);
+    }catch(e){
+      dbg(`❌ ${BRAND_META[tab.brand].label} (gid=${tab.gid}): ${e.message||e}`);
+    }
   }
-  // ไม่มีตัวไหนได้เกิน 60 — ใช้ตัวที่ได้มากสุดเท่าที่มี
-  if(best && best.length){ branches=best; status="live"; lastSync=new Date(); dbg(`⚠️ ใช้ผลดีที่สุด: ${bestName} — ${best.length} สาขา (อาจไม่ครบ ดูหมายเหตุด้านล่าง)`); render(); return; }
+  if(all.length){
+    branches=all; status="live"; lastSync=new Date();
+    dbg(`รวมทั้งหมด ${all.length} สาขา จาก ${okCount}/${TABS.length} แท็บ`);
+    render(); return;
+  }
   if(status!=="live") status="offline";
-  dbg("⛔ ทุกวิธีล้มเหลว — ใช้สถานะ Offline");
+  dbg("⛔ ดึงไม่ได้เลย — ใช้สถานะ Offline");
   render();
 }
 
