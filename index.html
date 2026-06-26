@@ -430,22 +430,33 @@
     function fetchTabJsonp(gid) {
       return new Promise((resolve, reject) => {
         const cbName = "__gviz_" + gid + "_" + Date.now();
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&headers=0&tqx=responseHandler:${cbName}&t=${Date.now()}`;
+        // tqx=out:json + responseHandler สำหรับ JSONP
+        // ไม่ใส่ headers=0 เพื่อให้ gviz ไม่เดาชนิดคอลัมน์จากแถวแรกผิด ๆ
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=responseHandler:${cbName}&t=${Date.now()}`;
         const s = document.createElement("script");
         const timer = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 12000);
         function cleanup() { clearTimeout(timer); try { delete window[cbName]; } catch (e) { } if (s.parentNode) s.parentNode.removeChild(s); }
         window[cbName] = (resp) => {
           try {
             if (!resp || !resp.table) { cleanup(); reject(new Error("no table")); return; }
-            // ใช้ค่า formatted (c.f) ก่อนเสมอ เพราะเป็นค่าที่แสดงในเซลล์จริง (เช่น "L1")
-            // ถ้าใช้ c.v อย่างเดียว gviz อาจคืน null สำหรับรหัส L1-L9 เพราะเดาคอลัมน์เป็นตัวเลข
-            const rows = (resp.table.rows || []).map(r => (r.c || []).map(c => {
-              if (!c) return "";
-              if (c.f != null) return String(c.f);
-              if (c.v != null) return String(c.v);
-              return "";
-            }));
-            cleanup(); resolve(rows);
+            const cols = resp.table.cols || [];
+            const rawRows = resp.table.rows || [];
+            // gviz บางทีดันแถวแรก(หัวตาราง)ไปเป็น cols label — ดึงกลับมาเป็นข้อมูลด้วย
+            const out = [];
+            // ถ้า cols มี label ที่ดูเหมือนข้อมูลจริง (อีเมล) ให้เก็บเป็นแถวแรก
+            const headerAsData = cols.map(c => c && c.label != null ? String(c.label) : "");
+            if (/@/.test(headerAsData[0] || "")) out.push(headerAsData);
+            for (const r of rawRows) {
+              const cells = (r.c || []).map(c => {
+                if (!c) return "";
+                // ใช้ค่า formatted (f) ก่อน ถ้าไม่มีใช้ค่าดิบ (v)
+                if (c.f != null && String(c.f).trim() !== "") return String(c.f);
+                if (c.v != null) return String(c.v);
+                return "";
+              });
+              out.push(cells);
+            }
+            cleanup(); resolve(out);
           } catch (e) { cleanup(); reject(e); }
         };
         s.onerror = () => { cleanup(); reject(new Error("script error (ตรวจสิทธิ์แชร์ชีต)")); };
@@ -453,24 +464,24 @@
       });
     }
 
-    // ดึง CSV ของแท็บเดียว — ลอง JSONP ก่อน (ชัวร์สุด) แล้วค่อย fetch CSV ตรง/proxy
+    // ดึง CSV ของแท็บเดียว — ลอง CSV ก่อน (เก็บค่าข้อความตรงเป๊ะ เช่น "L1") แล้วค่อย JSONP
     async function fetchTabCsv(gid) {
-      // 1) JSONP (วิธีหลัก — ไม่ติด CORS)
-      try { const rows = await fetchTabJsonp(gid); if (rows.length) return rows; }
-      catch (e) { /* ลองวิธีอื่นต่อ */ }
-      // 2) fetch CSV ตรง
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:csv&t=${Date.now()}`;
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:csv&t=${Date.now()}`;
+      // 1) fetch CSV ตรง — CSV เก็บค่าเป็นข้อความเสมอ รหัส L1-L9 ไม่หาย
       try {
-        const res = await fetch(url);
-        if (res.ok) { const t = await res.text(); if (t && t.length > 5) return parseCSV(t); }
-      } catch (e) { /* ลอง proxy */ }
-      // 3) ผ่าน proxy
+        const res = await fetch(csvUrl);
+        if (res.ok) { const t = await res.text(); if (t && t.length > 5 && !/^<!DOCTYPE/i.test(t)) return parseCSV(t); }
+      } catch (e) { /* ลองต่อ */ }
+      // 2) CSV ผ่าน proxy
       for (const p of PROXIES) {
         try {
-          const res = await fetch(p(url));
-          if (res.ok) { const t = await res.text(); if (t && t.length > 5) return parseCSV(t); }
+          const res = await fetch(p(csvUrl));
+          if (res.ok) { const t = await res.text(); if (t && t.length > 5 && !/^<!DOCTYPE/i.test(t)) return parseCSV(t); }
         } catch (e) { /* ตัวถัดไป */ }
       }
+      // 3) JSONP (สำรองสุดท้าย — ไม่ติด CORS แต่ค่าตัวเลข/รหัสอาจเพี้ยน)
+      try { const rows = await fetchTabJsonp(gid); if (rows.length) return rows; }
+      catch (e) { /* จบ */ }
       throw new Error("ดึงแท็บ gid=" + gid + " ไม่ได้");
     }
 
