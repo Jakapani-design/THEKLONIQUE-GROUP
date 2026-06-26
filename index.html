@@ -354,8 +354,10 @@
   </div>
 
   <script>
+    // Apps Script Web App endpoint — ส่ง JSON ครบทุกแบรนด์ในครั้งเดียว (รหัส L1 ไม่เพี้ยน)
+    const API_URL = "https://script.google.com/macros/s/AKfycbzJGKSFb91D-4mckxd2-MsOTTYnQ49mNgRXBNdUto5pyfaExCLVsOqWidGWhirGvmcG/exec";
     const SHEET_ID = "1k7hAoYI2i8_0yVgJjojuE31r70M2VgRfmB-lCYnsNwQ";
-    // แต่ละแบรนด์อยู่คนละแท็บ (gid) — ดึงทีละแท็บแล้วรวมกัน
+    // แต่ละแบรนด์อยู่คนละแท็บ (gid) — ใช้เป็น fallback ถ้า Apps Script ล่ม
     const TABS = [
       { gid: "2030192058", brand: "TKC" },
       { gid: "1968270494", brand: "LABX" },
@@ -485,28 +487,50 @@
       throw new Error("ดึงแท็บ gid=" + gid + " ไม่ได้");
     }
 
+    // ดึงจาก Apps Script (วิธีหลัก) — ได้ JSON ครบทุกแบรนด์ในครั้งเดียว
+    async function loadFromApi() {
+      const res = await fetch(API_URL + "?t=" + Date.now());
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      if (!data || !data.ok || !Array.isArray(data.branches)) throw new Error("รูปแบบข้อมูลไม่ถูกต้อง");
+      // กรองให้แน่ใจว่ามีแบรนด์ที่รู้จัก
+      return data.branches.filter(b => b.brand && BRAND_META[b.brand]);
+    }
+
     async function load() {
-      dbg("เริ่มดึงข้อมูลทั้ง " + TABS.length + " แท็บ...");
-      const all = [];
-      let okCount = 0;
+      // 1) วิธีหลัก: Apps Script (เร็ว ครบ รหัสไม่เพี้ยน)
+      try {
+        dbg("กำลังดึงจาก Apps Script API...");
+        const list = await loadFromApi();
+        if (list.length) {
+          branches = list; status = "live"; lastSync = new Date();
+          dbg(`✅ Apps Script — ได้ ${list.length} สาขา ครบทุกแบรนด์`);
+          render(); return;
+        }
+        dbg("⚠️ Apps Script ตอบกลับแต่ไม่มีข้อมูล — ลอง fallback");
+      } catch (e) {
+        dbg(`❌ Apps Script: ${e.message || e} — ลอง fallback (gviz)`);
+      }
+
+      // 2) Fallback: ดึงทีละแท็บผ่าน gviz (เผื่อ Apps Script ล่ม)
+      dbg("เริ่ม fallback ดึงทีละแท็บ...");
+      const all = []; let okCount = 0;
       for (const tab of TABS) {
         try {
           const rows = await fetchTabCsv(tab.gid);
           const parsed = rowsToBranches(rows, tab.brand);
-          all.push(...parsed);
-          okCount++;
+          all.push(...parsed); okCount++;
           dbg(`✅ ${BRAND_META[tab.brand].label}: ${parsed.length} สาขา`);
-        } catch (e) {
-          dbg(`❌ ${BRAND_META[tab.brand].label} (gid=${tab.gid}): ${e.message || e}`);
-        }
+        } catch (e) { dbg(`❌ ${BRAND_META[tab.brand].label}: ${e.message || e}`); }
       }
       if (all.length) {
         branches = all; status = "live"; lastSync = new Date();
-        dbg(`รวมทั้งหมด ${all.length} สาขา จาก ${okCount}/${TABS.length} แท็บ`);
+        dbg(`รวม (fallback) ${all.length} สาขา จาก ${okCount}/${TABS.length} แท็บ`);
         render(); return;
       }
+
       if (status !== "live") status = "offline";
-      dbg("⛔ ดึงไม่ได้เลย — ใช้สถานะ Offline");
+      dbg("⛔ ดึงไม่ได้เลย — Offline");
       render();
     }
 
