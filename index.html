@@ -437,7 +437,14 @@
         window[cbName] = (resp) => {
           try {
             if (!resp || !resp.table) { cleanup(); reject(new Error("no table")); return; }
-            const rows = (resp.table.rows || []).map(r => (r.c || []).map(c => c ? (c.v != null ? String(c.v) : "") : ""));
+            // ใช้ค่า formatted (c.f) ก่อนเสมอ เพราะเป็นค่าที่แสดงในเซลล์จริง (เช่น "L1")
+            // ถ้าใช้ c.v อย่างเดียว gviz อาจคืน null สำหรับรหัส L1-L9 เพราะเดาคอลัมน์เป็นตัวเลข
+            const rows = (resp.table.rows || []).map(r => (r.c || []).map(c => {
+              if (!c) return "";
+              if (c.f != null) return String(c.f);
+              if (c.v != null) return String(c.v);
+              return "";
+            }));
             cleanup(); resolve(rows);
           } catch (e) { cleanup(); reject(e); }
         };
