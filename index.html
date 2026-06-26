@@ -95,8 +95,9 @@ const SHEET_ID = "1k7hAoYI2i8_0yVgJjojuE31r70M2VgRfmB-lCYnsNwQ";
 const GID = "2030192058";
 const REFRESH_MS = 60000;
 const PROXIES = [
-  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+  u => "https://thingproxy.freeboard.io/fetch/" + u,
 ];
 
 const BRAND_META = {
@@ -205,21 +206,28 @@ async function loadCsvProxy(){
 }
 
 async function load(){
+  // CSV publish-to-web ส่งครบทุกแถวทั้งแผ่น (ไม่ตัดที่แถวว่าง) → ใช้เป็นหลัก
+  // gviz ตัดข้อมูลที่แถวว่างแรก ได้แค่บล็อกแรก → ใช้เป็นตัวสำรองสุดท้ายเท่านั้น
   const loaders=[
-    ["gviz CSV", loadGvizCsv],
-    ["CSV publish", loadCsvDirect],
-    ["CSV proxy", loadCsvProxy],
-    ["gviz JSON", loadGvizJson],
+    ["CSV publish (ตรง)", loadCsvDirect],
+    ["CSV publish (proxy)", loadCsvProxy],
+    ["gviz CSV (อาจไม่ครบ)", loadGvizCsv],
+    ["gviz JSON (อาจไม่ครบ)", loadGvizJson],
   ];
+  let best=null, bestName="";
   for(const [name,fn] of loaders){
     try{
       dbg(`กำลังลอง: ${name} ...`);
       const rows=await fn();
       const parsed=rowsToBranches(rows);
-      if(parsed.length){ branches=parsed; status="live"; lastSync=new Date(); dbg(`✅ สำเร็จด้วย ${name} — ได้ ${parsed.length} สาขา`); render(); return; }
-      dbg(`⚠️ ${name}: ดึงได้แต่ parse ไม่เจอข้อมูล`);
+      dbg(`   → ${name}: ได้ ${parsed.length} สาขา`);
+      if(parsed.length>(best?best.length:0)){ best=parsed; bestName=name; }
+      // ถ้าได้มากกว่า 52 (เกินบล็อกแรก) ถือว่าครบแล้ว หยุดเลย
+      if(parsed.length>60){ branches=parsed; status="live"; lastSync=new Date(); dbg(`✅ สำเร็จด้วย ${name} — ครบ ${parsed.length} สาขา`); render(); return; }
     }catch(e){ dbg(`❌ ${name}: ${e.message||e}`); }
   }
+  // ไม่มีตัวไหนได้เกิน 60 — ใช้ตัวที่ได้มากสุดเท่าที่มี
+  if(best && best.length){ branches=best; status="live"; lastSync=new Date(); dbg(`⚠️ ใช้ผลดีที่สุด: ${bestName} — ${best.length} สาขา (อาจไม่ครบ ดูหมายเหตุด้านล่าง)`); render(); return; }
   if(status!=="live") status="offline";
   dbg("⛔ ทุกวิธีล้มเหลว — ใช้สถานะ Offline");
   render();
