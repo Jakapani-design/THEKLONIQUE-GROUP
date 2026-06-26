@@ -1,61 +1,326 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Klinique Group — Branch Dashboard</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Segoe UI','Sarabun',sans-serif; background:#f1f5f9; color:#1e293b; }
-  a { text-decoration:none; color:inherit; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Klinique Group — Branch Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  .header { background:linear-gradient(90deg,#d4af37,#6b7280,#92400e); color:#fff; padding:22px 24px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
-  .header-inner { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; }
-  .header h1 { font-size:22px; display:flex; align-items:center; gap:8px; }
-  .header p { font-size:13px; opacity:.85; margin-top:4px; }
-  .status-row { display:flex; align-items:center; gap:10px; }
-  .pill { font-size:12px; background:rgba(255,255,255,.18); padding:6px 14px; border-radius:999px; display:inline-flex; align-items:center; gap:6px; cursor:default; }
-  .pill.btn { cursor:pointer; transition:.2s; }
-  .pill.btn:hover { background:rgba(255,255,255,.3); }
-  .sync { max-width:1200px; margin:8px auto 0; font-size:11px; opacity:.7; }
-  .dot { width:8px; height:8px; border-radius:50%; }
-  .dot.live { background:#22c55e; } .dot.off { background:#f87171; } .dot.load { background:#fbbf24; }
+    body {
+      font-family: 'Segoe UI', 'Sarabun', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+    }
 
-  .wrap { max-width:1200px; margin:0 auto; padding:24px; }
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
-  @media(max-width:640px){ .stats{ grid-template-columns:repeat(2,1fr);} }
-  .stat { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; align-items:center; gap:12px; }
-  .stat .ic { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; }
-  .stat .num { font-size:26px; font-weight:700; }
-  .stat .lbl { font-size:12px; color:#64748b; }
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
 
-  .controls { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:16px; }
-  .card { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  .card h3 { font-size:15px; color:#334155; margin-bottom:12px; }
-  .search { position:relative; margin-bottom:12px; }
-  .search input { width:100%; padding:10px 36px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; }
-  .search input:focus { border-color:#d4af37; box-shadow:0 0 0 3px rgba(212,175,55,.2); }
-  .search .si { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; }
-  .search .sx { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; cursor:pointer; display:none; }
-  .chips { display:flex; flex-wrap:wrap; gap:8px; }
-  .chip { padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; transition:.15s; }
+    .header {
+      background: linear-gradient(90deg, #d4af37, #6b7280, #92400e);
+      color: #fff;
+      padding: 22px 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+    }
 
-  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-  @media(max-width:880px){ .grid{ grid-template-columns:repeat(2,1fr);} }
-  @media(max-width:560px){ .grid{ grid-template-columns:1fr;} }
-  .branch { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); border-left:4px solid #ccc; transition:.15s; }
-  .branch:hover { box-shadow:0 4px 12px rgba(0,0,0,.12); }
-  .branch .top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:4px; }
-  .branch .bn { font-size:14px; font-weight:600; line-height:1.35; }
-  .branch .abbr { font-size:10px; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; flex-shrink:0; }
-  .branch .blabel { font-size:11px; color:#94a3b8; margin-bottom:10px; }
-  .branch .line { display:flex; gap:8px; font-size:12px; color:#475569; margin-top:6px; align-items:flex-start; }
-  .branch .line .li { flex-shrink:0; margin-top:1px; opacity:.6; }
-  .branch a.line:hover { color:#b8941f; }
-  .branch .email { word-break:break-all; }
-  .empty { text-align:center; padding:48px; color:#94a3b8; }
-</style>
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header p {
+      font-size: 13px;
+      opacity: .85;
+      margin-top: 4px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      font-size: 12px;
+      background: rgba(255, 255, 255, .18);
+      padding: 6px 14px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+    }
+
+    .pill.btn {
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .pill.btn:hover {
+      background: rgba(255, 255, 255, .3);
+    }
+
+    .sync {
+      max-width: 1200px;
+      margin: 8px auto 0;
+      font-size: 11px;
+      opacity: .7;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .dot.live {
+      background: #22c55e;
+    }
+
+    .dot.off {
+      background: #f87171;
+    }
+
+    .dot.load {
+      background: #fbbf24;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media(max-width:640px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stat {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat .ic {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+    }
+
+    .stat .num {
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .stat .lbl {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .controls {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+    }
+
+    .card h3 {
+      font-size: 15px;
+      color: #334155;
+      margin-bottom: 12px;
+    }
+
+    .search {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search input {
+      width: 100%;
+      padding: 10px 36px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search input:focus {
+      border-color: #d4af37;
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, .2);
+    }
+
+    .search .si {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+    }
+
+    .search .sx {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      cursor: pointer;
+      display: none;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media(max-width:880px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media(max-width:560px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .branch {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+      border-left: 4px solid #ccc;
+      transition: .15s;
+    }
+
+    .branch:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+    }
+
+    .branch .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .branch .bn {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .branch .abbr {
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .branch .blabel {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    .branch .line {
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+      color: #475569;
+      margin-top: 6px;
+      align-items: flex-start;
+    }
+
+    .branch .line .li {
+      flex-shrink: 0;
+      margin-top: 1px;
+      opacity: .6;
+    }
+
+    .branch a.line:hover {
+      color: #b8941f;
+    }
+
+    .branch .email {
+      word-break: break-all;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 48px;
+      color: #94a3b8;
+    }
+  </style>
 </head>
+
 <body>
   <div class="header">
     <div class="header-inner">
@@ -76,7 +341,7 @@
     <div class="controls">
       <div class="search">
         <span class="si">🔍</span>
-        <input id="searchInput" placeholder="ค้นหาสาขา / อีเมล / รหัส / เบอร์โทร / สถานที่...">
+        <input id="searchInput" placeholder="ค้นหารหัส (เช่น CC, L1, SQ) / ชื่อสาขา / อีเมล / เบอร์โทร...">
         <span class="sx" id="clearSearch">✕</span>
       </div>
       <div class="chips" id="chips"></div>
@@ -88,188 +353,226 @@
     </div>
   </div>
 
-<script>
-const SHEET_ID = "1k7hAoYI2i8_0yVgJjojuE31r70M2VgRfmB-lCYnsNwQ";
-// แต่ละแบรนด์อยู่คนละแท็บ (gid) — ดึงทีละแท็บแล้วรวมกัน
-const TABS = [
-  { gid: "2030192058", brand: "TKC" },
-  { gid: "1968270494", brand: "LABX" },
-  { gid: "1913778139", brand: "LCLINIC" },
-  { gid: "287917091",  brand: "SPA" },
-  { gid: "516769174",  brand: "HAIR" },
-  { gid: "1998580097", brand: "ACNE" },
-];
-const REFRESH_MS = 60000;
-const PROXIES = [
-  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
-  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
-  u => "https://thingproxy.freeboard.io/fetch/" + u,
-];
+  <script>
+    const SHEET_ID = "1k7hAoYI2i8_0yVgJjojuE31r70M2VgRfmB-lCYnsNwQ";
+    // แต่ละแบรนด์อยู่คนละแท็บ (gid) — ดึงทีละแท็บแล้วรวมกัน
+    const TABS = [
+      { gid: "2030192058", brand: "TKC" },
+      { gid: "1968270494", brand: "LABX" },
+      { gid: "1913778139", brand: "LCLINIC" },
+      { gid: "287917091", brand: "SPA" },
+      { gid: "516769174", brand: "HAIR" },
+      { gid: "1998580097", brand: "ACNE" },
+    ];
+    const REFRESH_MS = 60000;
+    const PROXIES = [
+      u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+      u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+      u => "https://thingproxy.freeboard.io/fetch/" + u,
+    ];
 
-const BRAND_META = {
-  TKC:     { label:"The Klinique", color:"#d4af37" },
-  LABX:    { label:"LABX",         color:"#6b7280" },
-  LCLINIC: { label:"L'Clinic",     color:"#ec4899" },
-  SPA:     { label:"Kliniqspa",    color:"#10b981" },
-  ACNE:    { label:"Kliniqacne",   color:"#2563eb" },
-  HAIR:    { label:"Hair Center",  color:"#92400e" },
-};
-const BRAND_ORDER = ["TKC","LABX","LCLINIC","SPA","ACNE","HAIR"];
+    const BRAND_META = {
+      TKC: { label: "The Klinique", color: "#d4af37" },
+      LABX: { label: "LABX", color: "#6b7280" },
+      LCLINIC: { label: "L'Clinic", color: "#ec4899" },
+      SPA: { label: "Kliniqspa", color: "#10b981" },
+      ACNE: { label: "Kliniqacne", color: "#2563eb" },
+      HAIR: { label: "Hair Center", color: "#92400e" },
+    };
+    const BRAND_ORDER = ["TKC", "LABX", "LCLINIC", "SPA", "ACNE", "HAIR"];
 
-function detectBrand(email, abbr){
-  const e=(email||"").toLowerCase();
-  // โดเมนเฉพาะของแต่ละแบรนด์
-  if(e.includes("labxofficial.com")) return "LABX";
-  if(e.includes("lcliniccenter.com")) return "LCLINIC";
-  // แบรนด์ที่ใช้โดเมน @theklinique.com ร่วมกัน — แยกด้วย prefix อีเมล (ห้ามใช้รหัสย่อ เพราะ S/A ชนกับสาขา TKC)
-  if(e.startsWith("wellness_")) return "SPA";
-  if(e.startsWith("kliniqacne")) return "ACNE";
-  if(e.startsWith("reception.haircenter")) return "HAIR";
-  // ที่เหลือทั้งหมดของ @theklinique.com = The Klinique
-  return "TKC";
-}
-
-function parseCSV(text){
-  const rows=[]; let row=[],field="",inQ=false;
-  for(let i=0;i<text.length;i++){ const c=text[i];
-    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; } else field+=c; }
-    else { if(c==='"')inQ=true; else if(c===','){row.push(field);field="";}
-      else if(c==='\n'){row.push(field);rows.push(row);row=[];field="";}
-      else if(c==='\r'){} else field+=c; }
-  }
-  if(field.length||row.length){ row.push(field); rows.push(row); }
-  return rows;
-}
-
-function rowsToBranches(rows){
-  const out=[]; const emailRe=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-  for(const r of rows){
-    const email=(r[0]||"").trim();
-    if(!emailRe.test(email)) continue;
-    if(/_branch@/i.test(email)) continue;
-    const name=(r[1]||"").trim();
-    if(!name) continue;
-    out.push({ email, name, abbr:(r[2]||"").trim(), address:(r[3]||"").trim(), phone:(r[4]||"").trim(), brand:detectBrand(email,(r[2]||"").trim()) });
-  }
-  return out;
-}
-
-let branches=[], activeBrand="ALL", query="", status="loading", lastSync=null;
-let debugLines=[];
-function dbg(msg){ debugLines.push(`[${new Date().toLocaleTimeString("th-TH")}] ${msg}`); const el=document.getElementById("debugLog"); if(el) el.textContent=debugLines.slice(-16).join("\n"); }
-
-// สร้าง URL gviz CSV ของแท็บหนึ่ง
-function gvizCsvUrl(gid){
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:csv&t=${Date.now()}`;
-}
-
-// ดึง CSV ของแท็บเดียว — ลอง fetch ตรงก่อน ถ้าไม่ได้ลองผ่าน proxy
-async function fetchTabCsv(gid){
-  const url=gvizCsvUrl(gid);
-  // 1) ตรง
-  try{
-    const res=await fetch(url);
-    if(res.ok){ const t=await res.text(); if(t && t.length>5) return parseCSV(t); }
-  }catch(e){ /* ลอง proxy ต่อ */ }
-  // 2) ผ่าน proxy
-  for(const p of PROXIES){
-    try{
-      const res=await fetch(p(url));
-      if(res.ok){ const t=await res.text(); if(t && t.length>5) return parseCSV(t); }
-    }catch(e){ /* ลองตัวถัดไป */ }
-  }
-  throw new Error("ดึงแท็บ gid="+gid+" ไม่ได้");
-}
-
-async function load(){
-  dbg("เริ่มดึงข้อมูลทั้ง "+TABS.length+" แท็บ...");
-  const all=[];
-  let okCount=0;
-  for(const tab of TABS){
-    try{
-      const rows=await fetchTabCsv(tab.gid);
-      const parsed=rowsToBranches(rows, tab.brand);
-      all.push(...parsed);
-      okCount++;
-      dbg(`✅ ${BRAND_META[tab.brand].label}: ${parsed.length} สาขา`);
-    }catch(e){
-      dbg(`❌ ${BRAND_META[tab.brand].label} (gid=${tab.gid}): ${e.message||e}`);
+    function detectBrand(email, abbr) {
+      const e = (email || "").toLowerCase();
+      // โดเมนเฉพาะของแต่ละแบรนด์
+      if (e.includes("labxofficial.com")) return "LABX";
+      if (e.includes("lcliniccenter.com")) return "LCLINIC";
+      // แบรนด์ที่ใช้โดเมน @theklinique.com ร่วมกัน — แยกด้วย prefix อีเมล (ห้ามใช้รหัสย่อ เพราะ S/A ชนกับสาขา TKC)
+      if (e.startsWith("wellness_")) return "SPA";
+      if (e.startsWith("kliniqacne")) return "ACNE";
+      if (e.startsWith("reception.haircenter")) return "HAIR";
+      // ที่เหลือทั้งหมดของ @theklinique.com = The Klinique
+      return "TKC";
     }
-  }
-  if(all.length){
-    branches=all; status="live"; lastSync=new Date();
-    dbg(`รวมทั้งหมด ${all.length} สาขา จาก ${okCount}/${TABS.length} แท็บ`);
-    render(); return;
-  }
-  if(status!=="live") status="offline";
-  dbg("⛔ ดึงไม่ได้เลย — ใช้สถานะ Offline");
-  render();
-}
 
-function present(){ const s=new Set(branches.map(b=>b.brand)); return BRAND_ORDER.filter(k=>s.has(k)); }
-function countBy(){ const m={}; branches.forEach(b=>m[b.brand]=(m[b.brand]||0)+1); return m; }
-function filtered(){
-  const q=query.trim().toLowerCase();
-  return branches.filter(b=>{
-    if(activeBrand!=="ALL"&&b.brand!==activeBrand) return false;
-    if(!q) return true;
-    return b.name.toLowerCase().includes(q)||b.email.toLowerCase().includes(q)||
-      b.abbr.toLowerCase().includes(q)||(b.phone||"").toLowerCase().includes(q)||(b.address||"").toLowerCase().includes(q);
-  });
-}
+    function parseCSV(text) {
+      const rows = []; let row = [], field = "", inQ = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQ) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; } else field += c; }
+        else {
+          if (c === '"') inQ = true; else if (c === ',') { row.push(field); field = ""; }
+          else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+          else if (c === '\r') { } else field += c;
+        }
+      }
+      if (field.length || row.length) { row.push(field); rows.push(row); }
+      return rows;
+    }
 
-function render(){
-  const cb=countBy(), pb=present(), total=branches.length, withPhone=branches.filter(b=>b.phone).length, shown=filtered().length;
+    function rowsToBranches(rows) {
+      const out = []; const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      for (const r of rows) {
+        const email = (r[0] || "").trim();
+        if (!emailRe.test(email)) continue;
+        if (/_branch@/i.test(email)) continue;
+        const name = (r[1] || "").trim();
+        if (!name) continue;
+        out.push({ email, name, abbr: (r[2] || "").trim(), address: (r[3] || "").trim(), phone: (r[4] || "").trim(), brand: detectBrand(email, (r[2] || "").trim()) });
+      }
+      return out;
+    }
 
-  document.getElementById("subtitle").textContent=`แดชบอร์ดสรุปข้อมูลสาขาทั้งหมด · ${total} สาขา · ${pb.length} แบรนด์`;
+    let branches = [], activeBrand = "ALL", query = "", status = "loading", lastSync = null;
+    let debugLines = [];
+    function dbg(msg) { debugLines.push(`[${new Date().toLocaleTimeString("th-TH")}] ${msg}`); const el = document.getElementById("debugLog"); if (el) el.textContent = debugLines.slice(-16).join("\n"); }
 
-  const st=document.getElementById("status");
-  if(status==="live") st.innerHTML='<span class="dot live"></span> Live';
-  else if(status==="loading") st.innerHTML='<span class="dot load"></span> กำลังโหลด';
-  else st.innerHTML='<span class="dot off"></span> Offline';
-  document.getElementById("sync").textContent = lastSync ? `อัปเดตล่าสุด: ${lastSync.toLocaleTimeString("th-TH")} · รีเฟรชอัตโนมัติทุก 60 วินาที` : "";
+    // ดึงแท็บเดียวด้วย JSONP (gviz responseHandler) — ไม่ติด CORS ไม่ต้องใช้ proxy
+    function fetchTabJsonp(gid) {
+      return new Promise((resolve, reject) => {
+        const cbName = "__gviz_" + gid + "_" + Date.now();
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&headers=0&tqx=responseHandler:${cbName}&t=${Date.now()}`;
+        const s = document.createElement("script");
+        const timer = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 12000);
+        function cleanup() { clearTimeout(timer); try { delete window[cbName]; } catch (e) { } if (s.parentNode) s.parentNode.removeChild(s); }
+        window[cbName] = (resp) => {
+          try {
+            if (!resp || !resp.table) { cleanup(); reject(new Error("no table")); return; }
+            const rows = (resp.table.rows || []).map(r => (r.c || []).map(c => c ? (c.v != null ? String(c.v) : "") : ""));
+            cleanup(); resolve(rows);
+          } catch (e) { cleanup(); reject(e); }
+        };
+        s.onerror = () => { cleanup(); reject(new Error("script error (ตรวจสิทธิ์แชร์ชีต)")); };
+        s.src = url; document.head.appendChild(s);
+      });
+    }
 
-  // stats
-  const stColors=["#d4af37","#6b7280","#10b981","#92400e"];
-  const stats=[["🏢","สาขาทั้งหมด",total],["#","แบรนด์",pb.length],["📞","มีเบอร์โทร",withPhone],["👁","แสดงผลอยู่",shown]];
-  document.getElementById("stats").innerHTML=stats.map((s,i)=>
-    `<div class="stat"><div class="ic" style="background:${stColors[i]}">${s[0]}</div><div><div class="num">${s[2]}</div><div class="lbl">${s[1]}</div></div></div>`).join("");
+    // ดึง CSV ของแท็บเดียว — ลอง JSONP ก่อน (ชัวร์สุด) แล้วค่อย fetch CSV ตรง/proxy
+    async function fetchTabCsv(gid) {
+      // 1) JSONP (วิธีหลัก — ไม่ติด CORS)
+      try { const rows = await fetchTabJsonp(gid); if (rows.length) return rows; }
+      catch (e) { /* ลองวิธีอื่นต่อ */ }
+      // 2) fetch CSV ตรง
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:csv&t=${Date.now()}`;
+      try {
+        const res = await fetch(url);
+        if (res.ok) { const t = await res.text(); if (t && t.length > 5) return parseCSV(t); }
+      } catch (e) { /* ลอง proxy */ }
+      // 3) ผ่าน proxy
+      for (const p of PROXIES) {
+        try {
+          const res = await fetch(p(url));
+          if (res.ok) { const t = await res.text(); if (t && t.length > 5) return parseCSV(t); }
+        } catch (e) { /* ตัวถัดไป */ }
+      }
+      throw new Error("ดึงแท็บ gid=" + gid + " ไม่ได้");
+    }
 
-  // chips
-  let chips=`<div class="chip" data-b="ALL" style="${activeBrand==="ALL"?'background:#475569;color:#fff;border-color:#475569':''}">ทั้งหมด (${total})</div>`;
-  chips+=pb.map(k=>`<div class="chip" data-b="${k}" style="${activeBrand===k?`background:${BRAND_META[k].color};color:#fff;border-color:${BRAND_META[k].color}`:''}">${BRAND_META[k].label} (${cb[k]||0})</div>`).join("");
-  document.getElementById("chips").innerHTML=chips;
-  document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ activeBrand=c.dataset.b; render(); });
+    async function load() {
+      dbg("เริ่มดึงข้อมูลทั้ง " + TABS.length + " แท็บ...");
+      const all = [];
+      let okCount = 0;
+      for (const tab of TABS) {
+        try {
+          const rows = await fetchTabCsv(tab.gid);
+          const parsed = rowsToBranches(rows, tab.brand);
+          all.push(...parsed);
+          okCount++;
+          dbg(`✅ ${BRAND_META[tab.brand].label}: ${parsed.length} สาขา`);
+        } catch (e) {
+          dbg(`❌ ${BRAND_META[tab.brand].label} (gid=${tab.gid}): ${e.message || e}`);
+        }
+      }
+      if (all.length) {
+        branches = all; status = "live"; lastSync = new Date();
+        dbg(`รวมทั้งหมด ${all.length} สาขา จาก ${okCount}/${TABS.length} แท็บ`);
+        render(); return;
+      }
+      if (status !== "live") status = "offline";
+      dbg("⛔ ดึงไม่ได้เลย — ใช้สถานะ Offline");
+      render();
+    }
 
-  // grid
-  const list=filtered();
-  document.getElementById("grid").innerHTML = list.length===0 ? '<div class="empty">ไม่พบสาขาที่ตรงกับการค้นหา</div>' :
-    list.map(b=>{
-      const c=BRAND_META[b.brand].color;
-      const phones=(b.phone||"").split(",").map(p=>p.trim()).filter(Boolean);
-      return `<div class="branch" style="border-left-color:${c}">
+    function present() { const s = new Set(branches.map(b => b.brand)); return BRAND_ORDER.filter(k => s.has(k)); }
+    function countBy() { const m = {}; branches.forEach(b => m[b.brand] = (m[b.brand] || 0) + 1); return m; }
+    function filtered() {
+      const q = query.trim().toLowerCase();
+      let list = branches.filter(b => {
+        if (activeBrand !== "ALL" && b.brand !== activeBrand) return false;
+        return true;
+      });
+      if (!q) return list;
+
+      // ให้คะแนนแต่ละสาขาตามความตรงของคำค้น (รหัสเป๊ะ = แม่นสุด)
+      const scored = [];
+      for (const b of list) {
+        const abbr = (b.abbr || "").toLowerCase();
+        let score = 0;
+        if (abbr === q) score = 100;                         // รหัสตรงเป๊ะ → บนสุด
+        else if (abbr.startsWith(q)) score = 80;           // รหัสขึ้นต้นด้วยคำค้น
+        else if (b.name.toLowerCase().includes(q)) score = 60;   // เจอในชื่อสาขา
+        else if (b.email.toLowerCase().includes(q)) score = 40;  // เจอในอีเมล
+        else if ((b.address || "").toLowerCase().includes(q)) score = 20; // เจอในที่อยู่
+        else if ((b.phone || "").toLowerCase().includes(q)) score = 20;   // เจอในเบอร์โทร
+        else if (abbr.includes(q)) score = 10;             // รหัสมีคำค้นอยู่กลาง ๆ
+        if (score > 0) scored.push({ b, score });
+      }
+      scored.sort((a, b) => b.score - a.score);              // คะแนนมากขึ้นก่อน
+      return scored.map(s => s.b);
+    }
+
+    function render() {
+      const cb = countBy(), pb = present(), total = branches.length, withPhone = branches.filter(b => b.phone).length, shown = filtered().length;
+
+      document.getElementById("subtitle").textContent = `แดชบอร์ดสรุปข้อมูลสาขาทั้งหมด · ${total} สาขา · ${pb.length} แบรนด์`;
+
+      const st = document.getElementById("status");
+      if (status === "live") st.innerHTML = '<span class="dot live"></span> Live';
+      else if (status === "loading") st.innerHTML = '<span class="dot load"></span> กำลังโหลด';
+      else st.innerHTML = '<span class="dot off"></span> Offline';
+      document.getElementById("sync").textContent = lastSync ? `อัปเดตล่าสุด: ${lastSync.toLocaleTimeString("th-TH")} · รีเฟรชอัตโนมัติทุก 60 วินาที` : "";
+
+      // stats
+      const stColors = ["#d4af37", "#6b7280", "#10b981", "#92400e"];
+      const stats = [["🏢", "สาขาทั้งหมด", total], ["#", "แบรนด์", pb.length], ["📞", "มีเบอร์โทร", withPhone], ["👁", "แสดงผลอยู่", shown]];
+      document.getElementById("stats").innerHTML = stats.map((s, i) =>
+        `<div class="stat"><div class="ic" style="background:${stColors[i]}">${s[0]}</div><div><div class="num">${s[2]}</div><div class="lbl">${s[1]}</div></div></div>`).join("");
+
+      // chips
+      let chips = `<div class="chip" data-b="ALL" style="${activeBrand === "ALL" ? 'background:#475569;color:#fff;border-color:#475569' : ''}">ทั้งหมด (${total})</div>`;
+      chips += pb.map(k => `<div class="chip" data-b="${k}" style="${activeBrand === k ? `background:${BRAND_META[k].color};color:#fff;border-color:${BRAND_META[k].color}` : ''}">${BRAND_META[k].label} (${cb[k] || 0})</div>`).join("");
+      document.getElementById("chips").innerHTML = chips;
+      document.querySelectorAll(".chip").forEach(c => c.onclick = () => { activeBrand = c.dataset.b; render(); });
+
+      // grid
+      const list = filtered();
+      document.getElementById("grid").innerHTML = list.length === 0 ? '<div class="empty">ไม่พบสาขาที่ตรงกับการค้นหา</div>' :
+        list.map(b => {
+          const c = BRAND_META[b.brand].color;
+          const phones = (b.phone || "").split(",").map(p => p.trim()).filter(Boolean);
+          return `<div class="branch" style="border-left-color:${c}">
         <div class="top"><div class="bn">${esc(b.name)}</div><div class="abbr" style="background:${c}">${esc(b.abbr)}</div></div>
         <div class="blabel">${BRAND_META[b.brand].label}</div>
         <a class="line email" href="mailto:${esc(b.email)}"><span class="li">✉️</span>${esc(b.email)}</a>
-        ${b.address?`<div class="line"><span class="li">📍</span>${esc(b.address)}</div>`:""}
-        ${phones.length?`<div class="line"><span class="li">📞</span><div>${phones.map(p=>`<a href="tel:${p.replace(/[^0-9+]/g,'')}" style="margin-right:8px">${esc(p)}</a>`).join("")}</div></div>`:""}
+        ${b.address ? `<div class="line"><span class="li">📍</span>${esc(b.address)}</div>` : ""}
+        ${phones.length ? `<div class="line"><span class="li">📞</span><div>${phones.map(p => `<a href="tel:${p.replace(/[^0-9+]/g, '')}" style="margin-right:8px">${esc(p)}</a>`).join("")}</div></div>` : ""}
       </div>`;
-    }).join("");
-}
+        }).join("");
+    }
 
-function esc(s){ return (s||"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function esc(s) { return (s || "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
 
-document.getElementById("searchInput").addEventListener("input",e=>{
-  query=e.target.value;
-  document.getElementById("clearSearch").style.display=query?"block":"none";
-  render();
-});
-document.getElementById("clearSearch").onclick=()=>{ query=""; document.getElementById("searchInput").value=""; document.getElementById("clearSearch").style.display="none"; render(); };
-document.getElementById("refreshBtn").onclick=load;
+    document.getElementById("searchInput").addEventListener("input", e => {
+      query = e.target.value;
+      document.getElementById("clearSearch").style.display = query ? "block" : "none";
+      render();
+    });
+    document.getElementById("clearSearch").onclick = () => { query = ""; document.getElementById("searchInput").value = ""; document.getElementById("clearSearch").style.display = "none"; render(); };
+    document.getElementById("refreshBtn").onclick = load;
 
-render();
-load();
-setInterval(load,REFRESH_MS);
-</script>
+    render();
+    load();
+    setInterval(load, REFRESH_MS);
+  </script>
 </body>
+
 </html>
