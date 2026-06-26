@@ -502,21 +502,32 @@
       });
       if (!q) return list;
 
-      // ให้คะแนนแต่ละสาขาตามความตรงของคำค้น (รหัสเป๊ะ = แม่นสุด)
+      // ถ้าคำค้นสั้น (<=3 ตัว) และเป็นรูปแบบรหัส (ตัวอักษร/ตัวเลขล้วน) → ค้นเฉพาะในช่อง "รหัส" เท่านั้น
+      // เพื่อไม่ให้ "ap" ไปแมตช์โดน thapra / ratchapruek ฯลฯ
+      const looksLikeCode = q.length <= 3 && /^[a-z0-9]+$/.test(q);
+
       const scored = [];
       for (const b of list) {
         const abbr = (b.abbr || "").toLowerCase();
         let score = 0;
-        if (abbr === q) score = 100;                         // รหัสตรงเป๊ะ → บนสุด
-        else if (abbr.startsWith(q)) score = 80;           // รหัสขึ้นต้นด้วยคำค้น
-        else if (b.name.toLowerCase().includes(q)) score = 60;   // เจอในชื่อสาขา
-        else if (b.email.toLowerCase().includes(q)) score = 40;  // เจอในอีเมล
-        else if ((b.address || "").toLowerCase().includes(q)) score = 20; // เจอในที่อยู่
-        else if ((b.phone || "").toLowerCase().includes(q)) score = 20;   // เจอในเบอร์โทร
-        else if (abbr.includes(q)) score = 10;             // รหัสมีคำค้นอยู่กลาง ๆ
+        if (looksLikeCode) {
+          // โหมดค้นรหัส: ดูเฉพาะช่องรหัส
+          if (abbr === q) score = 100;                 // ตรงเป๊ะ
+          else if (abbr.startsWith(q)) score = 80;    // ขึ้นต้นด้วยคำค้น
+          else if (abbr.includes(q)) score = 50;      // มีคำค้นในรหัส
+        } else {
+          // โหมดค้นทั่วไป: ดูทุกช่อง
+          if (abbr === q) score = 100;
+          else if (abbr.startsWith(q)) score = 80;
+          else if (b.name.toLowerCase().includes(q)) score = 60;
+          else if (b.email.toLowerCase().includes(q)) score = 40;
+          else if ((b.address || "").toLowerCase().includes(q)) score = 20;
+          else if ((b.phone || "").toLowerCase().includes(q)) score = 20;
+          else if (abbr.includes(q)) score = 10;
+        }
         if (score > 0) scored.push({ b, score });
       }
-      scored.sort((a, b) => b.score - a.score);              // คะแนนมากขึ้นก่อน
+      scored.sort((a, b) => b.score - a.score);
       return scored.map(s => s.b);
     }
 
